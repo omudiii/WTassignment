@@ -1,3 +1,50 @@
+<?php
+// Include database connection
+require_once 'db.php';
+
+// Process form submission and save to database
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['units'])) {
+    $name = trim($_POST['name'] ?? '');
+    $consumer = trim($_POST['consumer_id'] ?? '');
+    $area = trim($_POST['area'] ?? '');
+    $city = trim($_POST['city'] ?? '');
+    $units = floatval($_POST['units']);
+
+    $bill = 0.0;
+    $remaining = $units;
+    $breakdown = [];
+
+    // slab 1
+    $take = min($remaining, 50);
+    $breakdown[] = ['label' => 'First 50 units', 'units' => $take, 'rate' => 3.50, 'amount' => $take * 3.50];
+    $bill += $take * 3.50;
+    $remaining -= $take;
+
+    if ($remaining > 0) {
+        $take = min($remaining, 100);
+        $breakdown[] = ['label' => 'Next 100 units', 'units' => $take, 'rate' => 4.00, 'amount' => $take * 4.00];
+        $bill += $take * 4.00;
+        $remaining -= $take;
+    }
+
+    if ($remaining > 0) {
+        $take = min($remaining, 100);
+        $breakdown[] = ['label' => 'Next 100 units', 'units' => $take, 'rate' => 5.20, 'amount' => $take * 5.20];
+        $bill += $take * 5.20;
+        $remaining -= $take;
+    }
+
+    if ($remaining > 0) {
+        $take = $remaining;
+        $breakdown[] = ['label' => 'Above 250 units', 'units' => $take, 'rate' => 6.50, 'amount' => $take * 6.50];
+        $bill += $take * 6.50;
+        $remaining -= $take;
+    }
+
+    // Save to database
+    $billId = saveBill($db, $name, $consumer, $area, $city, $units, $bill, $breakdown);
+}
+?>
 <!doctype html>
 <html lang="en">
 <head>
@@ -114,15 +161,83 @@
                                 echo '</tbody></table>';
 
                                 echo '<div class="total"><strong>Total Units:</strong> '.htmlspecialchars(number_format($units,2)).' &nbsp; <strong>Total Bill:</strong> Rs. '.number_format($bill,2).'</div>';
+                                echo '<div class="success-msg">✓ Bill saved to database!</div>';
                         }
                         ?>
                     </div>
                 </div>
             </form>
+
+            <!-- Monthly Summary Section -->
+            <div class="card monthly-summary">
+                <h2>📊 Monthly Summary</h2>
+                <?php
+                $monthlySummary = getMonthlySummary($db);
+                if (!empty($monthlySummary)) {
+                    echo '<table class="summary-table"><thead><tr><th>Month</th><th>Records</th><th>Total Units</th><th>Total Amount (Rs.)</th><th>Avg Bill (Rs.)</th></tr></thead><tbody>';
+                    foreach ($monthlySummary as $month) {
+                        $monthStr = date('F Y', strtotime($month['billing_month']));
+                        echo '<tr>';
+                        echo '<td>'.htmlspecialchars($monthStr).'</td>';
+                        echo '<td>'.$month['record_count'].'</td>';
+                        echo '<td>'.number_format($month['total_units'], 2).'</td>';
+                        echo '<td>Rs. '.number_format($month['total_amount'], 2).'</td>';
+                        echo '<td>Rs. '.number_format($month['avg_amount'], 2).'</td>';
+                        echo '</tr>';
+                    }
+                    echo '</tbody></table>';
+                } else {
+                    echo '<p class="no-data">No billing records found. Calculate a bill to get started!</p>';
+                }
+                ?>
+            </div>
+
+            <!-- All Bills History Section -->
+            <div class="card bills-history">
+                <h2>📝 Billing History - All Months & Usages</h2>
+                <?php
+                $allBills = getAllBills($db);
+                if (!empty($allBills)) {
+                    echo '<table class="history-table"><thead><tr><th>S.No</th><th>Customer Name</th><th>Consumer ID</th><th>Month</th><th>Units</th><th>Bill (Rs.)</th><th>Details</th></tr></thead><tbody>';
+                    $sno = 1;
+                    foreach ($allBills as $billRecord) {
+                        $monthStr = date('F Y', strtotime($billRecord['billing_month']));
+                        echo '<tr>';
+                        echo '<td>'.$sno.'</td>';
+                        echo '<td>'.htmlspecialchars($billRecord['customer_name'] ?: 'N/A').'</td>';
+                        echo '<td>'.htmlspecialchars($billRecord['consumer_id'] ?: 'N/A').'</td>';
+                        echo '<td>'.$monthStr.'</td>';
+                        echo '<td>'.number_format($billRecord['units'], 2).'</td>';
+                        echo '<td><strong>Rs. '.number_format($billRecord['bill_amount'], 2).'</strong></td>';
+                        echo '<td>';
+                        
+                        // Get breakdown for this bill
+                        $breakdown = getBillBreakdown($db, $billRecord['id']);
+                        if (!empty($breakdown)) {
+                            echo '<details style="cursor:pointer; color: #0066cc;"><summary>View Breakdown</summary>';
+                            echo '<table style="margin-top: 10px; font-size: 0.9em;"><thead><tr><th>Slab</th><th>Units</th><th>Rate</th><th>Amount</th></tr></thead><tbody>';
+                            foreach ($breakdown as $item) {
+                                echo '<tr><td>'.htmlspecialchars($item['slab_label']).'</td>';
+                                echo '<td>'.number_format($item['units'], 2).'</td>';
+                                echo '<td>Rs. '.number_format($item['rate'], 2).'</td>';
+                                echo '<td>Rs. '.number_format($item['amount'], 2).'</td></tr>';
+                            }
+                            echo '</tbody></table></details>';
+                        }
+                        echo '</td>';
+                        echo '</tr>';
+                        $sno++;
+                    }
+                    echo '</tbody></table>';
+                } else {
+                    echo '<p class="no-data">No billing records yet. Submit a bill calculation to see history here.</p>';
+                }
+                ?>
+            </div>
         </main>
 
         <footer class="foot">
-            <small>Designed for assignment — slab rates applied as specified.</small>
+            <small>Designed for assignment — slab rates applied as specified. Database-enabled billing system.</small>
         </footer>
     </div>
 
