@@ -1,4 +1,49 @@
 {
-    "bills": [],
-    "bill_breakdown": []
+    "bills": [
+        {
+            "id": 1,
+            "customer_name": "Om Chavhan",
+            "consumer_id": "78963215",
+            "area": "Renuka nagar",
+            "city": "Akola",
+            "units": 520,
+            "bill_amount": 2850,
+            "billing_month": "2026-08-01",
+            "created_at": "2026-08-13 11:38:08"
+        }
+    ],
+    "bill_breakdown": [
+        {
+            "id": 1,
+            "bill_id": 1,
+            "slab_label": "First 50 units",
+            "units": 50,
+            "rate": 3.5,
+            "amount": 175
+        },
+        {
+            "id": 2,
+            "bill_id": 1,
+            "slab_label": "Next 100 units",
+            "units": 100,
+            "rate": 4,
+            "amount": 400
+        },
+        {
+            "id": 3,
+            "bill_id": 1,
+            "slab_label": "Next 100 units",
+            "units": 100,
+            "rate": 5.2,
+            "amount": 520
+        },
+        {
+            "id": 4,
+            "bill_id": 1,
+            "slab_label": "Above 250 units",
+            "units": 270,
+            "rate": 6.5,
+            "amount": 1755
+        }
+    ]
 }
